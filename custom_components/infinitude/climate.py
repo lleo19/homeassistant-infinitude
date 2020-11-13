@@ -276,7 +276,7 @@ class InfinitudeZone(ClimateEntity):
         self.zone_name = get_safe(self.zone_status, "name")
         self._temperature_unit = get_safe(self.system_config, "cfgem")
         self._current_temperature = float(get_safe(self.zone_status, "rt"))
-        self._hvac_action = get_safe(self.zone_status, "zoneconditioning")
+        self._hvac_action = get_safe(self.system_status, "mode")
         self._current_humidity = float(get_safe(self.zone_status, "rh"))
         self._hvac_mode = get_safe(self.system_config, "mode")
         self.hold_state = get_safe(self.zone_config, "hold")
@@ -338,11 +338,16 @@ class InfinitudeZone(ClimateEntity):
 
         # Current timestamp can include a TZ offset in some systems.  It should be stripped off
         # since the timestamp is already in the local time.
-        local_time = get_safe(self.system_status, "localTime")
-        matches = re.match(
-            r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2})?$", local_time
-        )
-        local_time = matches.group(1)
+        #local_time = get_safe(self.system_status, "localTime")
+        #matches = re.match(
+        #    r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2})?$", local_time
+        #)
+        #local_time = matches.group(1)
+        #dt = datetime.datetime.strptime(local_time, "%Y-%m-%dT%H:%M:%S")
+
+        now = datetime.datetime.now()
+        current_time = now.strftime("%Y-%m-%dT%H:%M:%S")
+        local_time = current_time
         dt = datetime.datetime.strptime(local_time, "%Y-%m-%dT%H:%M:%S")
 
         while self.activity_next is None:
@@ -470,7 +475,7 @@ class InfinitudeZone(ClimateEntity):
             return HVAC_MODE_HEAT
         elif self._hvac_mode == "cool":
             return HVAC_MODE_COOL
-        elif self._hvac_mode == "auto":
+        elif self._hvac_mode == "heatcool":
             return HVAC_MODE_HEAT_COOL
         elif self._hvac_mode == "fanonly":
             return HVAC_MODE_FAN_ONLY
@@ -500,7 +505,7 @@ class InfinitudeZone(ClimateEntity):
         # TODO: Add logic for fan
         if self.hvac_mode == HVAC_MODE_OFF:
             return CURRENT_HVAC_OFF
-        elif self._hvac_action == "idle":
+        elif self._hvac_action == "off":
             return CURRENT_HVAC_IDLE
         elif "heat" in self._hvac_action:
             return CURRENT_HVAC_HEAT
@@ -657,7 +662,7 @@ class InfinitudeZone(ClimateEntity):
     def set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_HEAT_COOL:
-            data = {"mode": "auto"}
+            data = {"mode": "heatcool"}
         elif hvac_mode == HVAC_MODE_HEAT:
             data = {"mode": "heat"}
         elif hvac_mode == HVAC_MODE_COOL:
